@@ -27,6 +27,21 @@ export const MIGRATIONS = Object.freeze({
   // never been through a counted session, so it starts at 0; the load that follows
   // makes it session 1, exactly like a new game.
   1: (save) => ({ ...save, schemaVersion: save.schemaVersion + 1, sessionNumber: 0 }),
+
+  // v2 → v3: record when the game began, for the header's day count. An existing save
+  // never stored it, so use the earliest moment it does record: the oldest log entry,
+  // else lastUpdateMs. The log keeps only the newest entries, so for a long game this
+  // is a lower bound on age, and the day count starts from there.
+  2: (save) => {
+    const times = (Array.isArray(save.events) ? save.events : [])
+      .map((e) => e && e.atMs)
+      .filter(Number.isFinite);
+    return {
+      ...save,
+      schemaVersion: save.schemaVersion + 1,
+      startedAtMs: Math.min(save.lastUpdateMs, ...times),
+    };
+  },
 });
 
 // Runs a save through the chain up to targetVersion. Throws if a step is missing, and
@@ -71,6 +86,7 @@ export function validate(state) {
 
   if (!isInt(state.schemaVersion)) problems.push('schemaVersion is not an integer');
   if (!finite(state.lastUpdateMs)) problems.push('lastUpdateMs is not a finite number');
+  if (!finite(state.startedAtMs)) problems.push('startedAtMs is not a finite number');
   if (!finite(state.pool) || state.pool < 0) problems.push('pool is not a finite number >= 0');
   if (!isInt(state.slots) || state.slots < 1) problems.push('slots is not a positive integer');
   if (!isInt(state.nextCellId)) problems.push('nextCellId is not an integer');

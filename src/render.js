@@ -27,7 +27,9 @@ const LAYOUT = Object.freeze({
   hintGap: 3,
 });
 
-const GLYPHS = Object.freeze({ cell: 'o', dividing: '8', reserved: '?', empty: ' ' });
+// Empty slots get a glyph of their own so all nine positions (and tap targets) show at
+// all times; '-' is never used for nutrient dots, which only appear outside the membrane.
+const GLYPHS = Object.freeze({ cell: 'o', dividing: '8', reserved: '?', empty: '-' });
 
 export function render(viewModel) {
   return layout(viewModel).lines.join('\n');
@@ -76,17 +78,18 @@ function game(out, vm) {
     text(out, listRow(row));
   }
   rule(out, '-');
-  const recent = vm.log.slice(-LAYOUT.logLines);
-  for (let i = 0; i < LAYOUT.logLines; i++) text(out, recent[i] ? ` ${recent[i]}` : '');
-  rule(out, '-');
-  const message = wrap(vm.message, LAYOUT.width - 1).slice(0, LAYOUT.messageLines);
-  for (let i = 0; i < LAYOUT.messageLines; i++) text(out, message[i] ? ` ${message[i]}` : '');
+  // Controls sit at a fixed row directly under the list. What varies in length (the
+  // message, the log) comes after them, so nothing above ever moves and no space is
+  // held open for lines that don't exist yet.
   hints(out, vm);
+  for (const line of wrap(vm.message, LAYOUT.width - 1).slice(0, LAYOUT.messageLines)) text(out, ` ${line}`);
+  rule(out, '-');
+  for (const entry of vm.log.slice(-LAYOUT.logLines)) text(out, ` ${entry}`);
 }
 
 function header(out, vm) {
   const left = ` ${vm.title}   ${vm.era}`;
-  const right = `${vm.clock} `;
+  const right = vm.dayText ? `${vm.dayText}   ${vm.clock} ` : `${vm.clock} `;
   text(out, left + ' '.repeat(Math.max(1, LAYOUT.width - left.length - right.length)) + right);
   rule(out, '=');
   if (vm.banner) for (const line of wrap(`! ${vm.banner}`, LAYOUT.width - 1)) text(out, ` ${line}`);
@@ -150,11 +153,13 @@ function waterCells() {
 }
 
 // One line of the cell list; the header and every row go through here, so the columns
-// always line up.
+// always line up. An empty or reserved slot has no measurements, so its note starts in
+// the cell column instead of trailing after a run of blank columns.
 function listRow(r) {
   const w = LAYOUT.columns;
   // The first column is "slot" in the header and "> 1" (marker, then number) in a row.
   const first = r.slot === 'slot' ? r.slot : `${r.selected ? '>' : ' '} ${r.slot}`;
+  if (!r.id) return [' ', first.padEnd(w.slot), ' ', r.state].join('');
   return [
     ' ',
     first.padEnd(w.slot),
@@ -170,7 +175,7 @@ function listRow(r) {
     r.net.padStart(w.net),
     ' ',
     r.divTime.padStart(w.divTime),
-    '  ',
+    ' ',
     r.state,
   ].join('');
 }

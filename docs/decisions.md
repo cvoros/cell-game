@@ -174,6 +174,42 @@ When a decision is reversed, add a new entry rather than editing the old one.
   - **Monochrome in both color schemes:** Era 1 has no color, but the page follows the
     system light or dark setting (one foreground, one background).
 
+- **No exact values anywhere on screen: everything is a measurement** (session
+  2d-fix, from reviewing the live page). This reverses the 2d choice to show the colony
+  rate exactly. With one cell, an exact header rate *is* that cell's true net, which
+  defeated §13.8's noise at the very moment the player is learning to read it. "Full in"
+  was a second exact channel to the same number, and with a few cells an exact sum
+  pins down each noisy per-cell reading. Now every aggregate is built from the
+  displayed per-cell values: the header rate is the sum of the nets shown (to the same
+  two decimals), and "full in" / "empty in" comes from that rate, so header and list
+  always agree.
+  - **What stays exact, and why:** the pool (the rules act on it, and a noisy pool
+    would make "not enough nutrients" lie), counts, and the time left on a division.
+  - **Known residual channel:** watching the exact pool change over time reveals the
+    colony's true total income. It's slow to read at one decimal, never isolates a
+    single cell, and closing it would mean making the stock itself uncertain. That's a
+    bigger design change, left for playtest to justify.
+  - **Also true, not a leak:** the founder's traits are public by design (rules screen,
+    §13.8), so a single founder's net was never secret. The fix matters from the first
+    split on.
+- **Schema v3 adds `startedAtMs`** for the header's day count. The v2 → v3 migration
+  uses the oldest log entry, else `lastUpdateMs`. The log keeps only 50 entries, so for
+  a long-running save that's a lower bound on its age, and the day count restarts from
+  there. Days count 24 h periods of play from the start (day 1 = the first 24 h), not
+  calendar days, which keeps it pure and independent of time zone. The §13.10 table
+  counts from Day 0; the header counts from day 1, because "day 0" reads oddly to a
+  player.
+- **Migrations are exempt from the no-numbers guard.** A migration is frozen history:
+  its version keys and any defaults it writes must never change when the config is
+  retuned, so it must hardcode them and never read `CONFIG`. The architecture test
+  enforces the second half.
+- **Screen layout changes from review:**
+  - Empty slots draw as `-`, so all nine positions show.
+  - The controls sit at a fixed row under the list, with the message and a
+    content-sized log below them, so there's no dead space and no jumping.
+  - Empty and reserved rows start their note in the cell column.
+  - A dividing cell reads `splits in 5h58m`, one space after `div time`.
+
 ### Pending
 
 - Earned vs. progression-tied graphics.

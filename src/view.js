@@ -1,22 +1,24 @@
 // Builds the view model: everything the screen shows, as display-ready data. Pure: no
 // DOM, no storage, no clock (times are formatted by functions the caller passes in).
 //
-// This is where genotype becomes phenotype (§13.8). The player sees measured values
-// with noise, never the traits, and nothing that leaves this module carries a raw trait
-// value. Mutations are never mentioned either: a player could see a daughter die, but
-// not which of its genes changed.
+// This is where genotype becomes phenotype (§13.8). Nothing on screen is a true
+// value; everything is a measurement. Per-cell values carry noise, and every aggregate
+// shown (the colony rate, "full in") is built from those measured values, never from
+// the true ones, so a total can't be used to back out a cell's traits. Mutations are
+// never mentioned either: a player could see a daughter die, but not which of its genes
+// changed.
 
 import { CONFIG } from './config.js';
 import { hashSeed, nextGaussian } from './rng.js';
-import { cap, colonyNet, upkeep } from './state.js';
+import { cap, upkeep } from './state.js';
 
 // Display formats. Presentation, not tuning, so they live here rather than in config.
 const FORMAT = Object.freeze({
   minutesPerHour: 60,
+  hoursPerDay: 24,
   minuteDigits: 2,
   percent: 100,
   poolDecimals: 1,
-  rateDecimals: 1,
   cellDecimals: 2,
   logTimeWidth: 10,
 });
@@ -69,7 +71,7 @@ export function buildViewModel(state, ui = {}, config = CONFIG) {
   const hour = config.msPerHour;
   const now = state.lastUpdateMs;
   const capacity = cap(state, config);
-  const rate = colonyNet(state, config);
+  let measuredRate = 0; // sum of the displayed per-cell nets, as displayed
 
   const slots = [];
   const rows = [];
@@ -95,9 +97,10 @@ export function buildViewModel(state, ui = {}, config = CONFIG) {
         divTime: `~${formatDuration(seen.divisionHours)}`,
         // Remaining time is exact: a player can watch a division finish.
         state: cell.division
-          ? `dividing, ${formatDuration((cell.division.completesAtMs - now) / hour)} left`
+          ? `splits in ${formatDuration((cell.division.completesAtMs - now) / hour)}`
           : '',
       });
+      measuredRate += Number(seen.net.toFixed(FORMAT.cellDecimals));
     } else {
       rows.push({
         slot: String(slot),
@@ -108,7 +111,7 @@ export function buildViewModel(state, ui = {}, config = CONFIG) {
         upkeep: '',
         net: '',
         divTime: '',
-        state: reservedBy ? `reserved (${label(reservedBy.id)})` : 'empty',
+        state: reservedBy ? `reserved for a daughter of ${label(reservedBy.id)}` : 'empty',
       });
     }
   }
@@ -117,15 +120,17 @@ export function buildViewModel(state, ui = {}, config = CONFIG) {
     screen,
     title: 'CELL-GAME',
     era: 'Era 1 · Prokaryote',
+    dayText: `day ${Math.floor((now - state.startedAtMs) / hour / FORMAT.hoursPerDay) + 1}`,
     clock: formatDate(now),
     banner,
     message,
     slots,
     nutrientFill: capacity > 0 ? Math.min(1, state.pool / capacity) : 0,
     poolText: `${state.pool.toFixed(FORMAT.poolDecimals)} / ${amount(capacity)}`,
-    // The colony's total income is exact: the player can watch the pool move.
-    rateText: `${signed(rate, FORMAT.rateDecimals)} N/h`,
-    fillText: fillText(state.pool, capacity, rate),
+    // Measured, not true: the sum of the per-cell nets shown in the list, to the same
+    // precision, and "full in" follows from it, so the header and the list agree.
+    rateText: `${signed(measuredRate, FORMAT.cellDecimals)} N/h`,
+    fillText: fillText(state.pool, capacity, measuredRate),
     cellsText: `${state.cells.length}/${state.slots}`,
     dividingText: String(state.cells.filter((c) => c.division).length),
     generationText: String(Math.max(0, ...state.cells.map((c) => c.generation))),

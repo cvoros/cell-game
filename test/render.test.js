@@ -14,6 +14,7 @@ function fixture(overrides = {}) {
     screen: 'game',
     title: 'CELL-GAME',
     era: 'Era 1 · Prokaryote',
+    dayText: 'day 3',
     clock: 'Tue 22 Sep  08:14',
     banner: '',
     message: '',
@@ -30,7 +31,7 @@ function fixture(overrides = {}) {
     ],
     nutrientFill: 28.4 / 54,
     poolText: '28.4 / 54',
-    rateText: '+3.3 N/h',
+    rateText: '+3.26 N/h',
     fillText: 'full in 7h51m',
     cellsText: '7/9',
     dividingText: '1',
@@ -38,9 +39,9 @@ function fixture(overrides = {}) {
     rows: [
       row(1, 'c41', '11', '1.42', '0.76', '+0.66', '~5h50m'),
       row(2, 'c38', '10', '1.05', '0.61', '+0.44', '~6h20m'),
-      row(3, 'c44', '10', '1.18', '0.66', '+0.52', '~6h05m', 'dividing, 5h58m left'),
+      row(3, 'c44', '10', '1.18', '0.66', '+0.52', '~6h05m', 'splits in 5h58m'),
       row(4, 'c33', '9', '0.97', '0.59', '+0.38', '~6h10m'),
-      empty(5, 'reserved (c44)'),
+      empty(5, 'reserved for a daughter of c44'),
       row(6, 'c40', '11', '1.21', '0.62', '+0.59', '~9h25m'),
       row(7, 'c42', '11', '0.78', '0.54', '+0.24', '~6h00m'),
       empty(8, 'empty'),
@@ -80,10 +81,10 @@ test('the membrane shows all 9 slots with the documented glyphs', () => {
   assert.equal(dish[1].slice(11, 42), border, 'top border');
   assert.equal(dish[9].slice(11, 42), border, 'bottom border');
   const inside = (line) => line.slice(12, 41);
-  assert.deepEqual([3, 5, 7].map((i) => inside(dish[i]).replace(/ /g, '')), ['[o]o8', 'o?o', 'oo']);
-  // Slot 8 is empty: row 3 has only two glyphs, at the left and right positions.
+  assert.deepEqual([3, 5, 7].map((i) => inside(dish[i]).replace(/ /g, '')), ['[o]o8', 'o?o', 'o-o']);
+  // Slot 8 is empty and still visible, with its own glyph, not a nutrient dot.
   assert.equal(dish[7][11 + 5], 'o');
-  assert.equal(dish[7][11 + 15], ' ');
+  assert.equal(dish[7][11 + 15], '-');
   assert.equal(dish[7][11 + 25], 'o');
 });
 
@@ -105,7 +106,8 @@ test('the list columns line up with the header', () => {
   assert.equal(endOf(row, '+0.66'), endOf(header, 'net'));
   assert.equal(endOf(row, '~5h50m'), endOf(header, 'div time'));
   const dividing = screen.find((l) => l.includes('c44'));
-  assert.equal(dividing.indexOf('dividing,'), header.indexOf('state'));
+  assert.equal(dividing.indexOf('splits in'), header.indexOf('state'));
+  assert.equal(header.indexOf('state') - endOf(header, 'div time'), 1, 'state sits one space after div time');
 });
 
 test('the log shows the most recent 4 entries', () => {
@@ -115,6 +117,30 @@ test('the log shows the most recent 4 entries', () => {
   for (const entry of ['c37 split', 'c35 culled', 'c44 began dividing', 'welcome back']) {
     assert.ok(text.includes(entry), entry);
   }
+});
+
+test('empty and reserved slots read from the cell column, not the far right', () => {
+  const screen = lines(fixture());
+  const header = screen.find((l) => l.includes('div time'));
+  const reserved = screen.find((l) => l.includes('reserved for a daughter of c44'));
+  const empty = screen.find((l) => /^ {3}8 /.test(l));
+  assert.equal(reserved.indexOf('reserved'), header.indexOf('cell'));
+  assert.equal(empty.indexOf('empty'), header.indexOf('cell'));
+});
+
+test('the controls stay put however long the log and message are', () => {
+  const hintsRow = (vm) => lines(vm).findIndex((l) => l.includes('[d] divide'));
+  const base = hintsRow(fixture({ log: ['08:14      a single cell adrift in a primordial sea'] }));
+  assert.equal(hintsRow(fixture()), base);
+  assert.equal(hintsRow(fixture({ message: 'word '.repeat(40) })), base);
+  // And there is no blank run held open under the controls.
+  const screen = lines(fixture({ log: ['08:14      a single cell adrift in a primordial sea'] }));
+  assert.equal(screen.at(-1).trim(), '08:14      a single cell adrift in a primordial sea');
+  assert.ok(!screen.slice(base).some((l) => l.trim() === ''), 'no empty lines below the controls');
+});
+
+test('the header shows the day count beside the clock', () => {
+  assert.match(lines(fixture())[0], /day 3 {3}Tue 22 Sep {2}08:14$/);
 });
 
 test('the nutrient dots track the pool', () => {
@@ -134,7 +160,7 @@ test('banners and messages are drawn; the hint line carries the costs', () => {
   const text = render(fixture({ banner: 'Saving failed.', message: 'Press c again to cull c41.' }));
   assert.ok(text.includes('! Saving failed.'));
   assert.ok(text.includes('Press c again to cull c41.'));
-  assert.match(text.split('\n').at(-1), /\[d\] divide -12 N {3}\[c\] cull \+3 N/);
+  assert.ok(text.split('\n').some((l) => /\[d\] divide -12 N {3}\[c\] cull \+3 N/.test(l)));
 });
 
 test('hitTest maps grid slots, list rows and command hints', () => {
@@ -145,7 +171,7 @@ test('hitTest maps grid slots, list rows and command hints', () => {
   assert.deepEqual(hitTest(vm, gridRow, 11 + 15), { type: 'select', slot: 5 });
   const c39 = screen.findIndex((l) => l.includes('c39'));
   assert.deepEqual(hitTest(vm, ...at('c39', c39)), { type: 'select', slot: 9 });
-  const last = screen.length - 1;
+  const last = screen.findIndex((l) => l.includes('[d]'));
   assert.deepEqual(hitTest(vm, ...at('[d]', last)), { type: 'key', key: 'd' });
   assert.deepEqual(hitTest(vm, ...at('[c]', last)), { type: 'key', key: 'c' });
   assert.deepEqual(hitTest(vm, ...at('[?]', last)), { type: 'key', key: '?' });

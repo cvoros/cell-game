@@ -34,6 +34,7 @@ export function makeState({ pool, cells, nowMs = 0, seed = 1 }) {
   return {
     schemaVersion: CONFIG.schemaVersion,
     lastUpdateMs: nowMs,
+    startedAtMs: nowMs,
     pool,
     slots: CONFIG.membraneSlots,
     cells,

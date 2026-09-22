@@ -22,10 +22,11 @@ is not enabled yet, so it can't be played from a phone.
 - `src/save.js`: the only module that touches storage. `saveGame`/`loadGame` with
   injected storage, `validate()`, a migration chain (v1 → v2), a `.corrupt` backup for
   bad saves, refusal of saves from newer versions, and catch-up via `advance()` on load.
-  It never throws on storage failures. The save format is at schema v2 (adds
-  `sessionNumber`).
+  It never throws on storage failures. The save format is at schema v3 (v2 added
+  `sessionNumber`, v3 `startedAtMs`), with frozen v1 and v2 fixtures in the tests.
 - `src/view.js`: pure view model. It applies the §13.8 noise (seeded by cell id and
-  session) and holds all wording: event log, messages, banners, and the rules and help
+  session). Every aggregate on screen is built from the measured values, never the
+  true ones. It holds all wording: event log, messages, banners, and the rules and help
   screens.
 - `src/render.js`: pure `render(viewModel) -> string` plus `hitTest` for clicks and
   taps. It imports nothing.

@@ -5,6 +5,7 @@
 // {
 //   schemaVersion: number,        save-format version (CONFIG.schemaVersion)
 //   lastUpdateMs:  number,        simulated clock: the moment this state describes
+//   startedAtMs:   number,        when this game began (v3); the header's day count
 //   pool:          number,        shared nutrients, N; 0 <= pool <= cap
 //   slots:         number,        membrane slots, numbered 1..slots
 //   cells: [                      living cells, in id order
@@ -46,6 +47,7 @@ export function createInitialState({ nowMs, seed }, config = CONFIG) {
   const draft = {
     schemaVersion: config.schemaVersion,
     lastUpdateMs: nowMs,
+    startedAtMs: nowMs,
     pool: config.startingNutrients,
     slots: config.membraneSlots,
     cells: [],

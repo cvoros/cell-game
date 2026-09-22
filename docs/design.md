@@ -411,6 +411,8 @@ and a promising cell about once a day.
 | `displayNoise` | SD 5%, multiplicative, applied separately to each value | Measurements are imperfect. A 15% gap is obvious; a 5% gap needs a few check-ins before it can be trusted, which makes selection a judgment rather than a sort. |
 | Noise refresh | Rerolled per cell once per session, seeded by (cell id, session number) | Repeated looks agree within one visit, so the player can't reroll by refreshing. Across visits, the player builds confidence. |
 | Rules screen | All config values and formulas on this page are visible in-game (`[i]`) | Pillar 6: numbers are visible. The rules are public; only the individual cell's genes are hidden. |
+| Aggregates | **Nothing on screen is a true value; everything is a measurement.** The header's colony rate is the sum of the displayed per-cell nets (to the same two decimals), and "full in" / "empty in" is computed from that measured rate. | If an aggregate were exact, it would undo the noise: with one cell, an exact colony rate *is* that cell's true net, and with a few cells the exact sum pins down each noisy reading. |
+| Deliberately exact | The pool, counts (cells, dividing, generation), and the time left on a division | These are facts the player could count or watch directly, and the rules act on them (divide checks the exact pool). Known residual channel: watching the exact pool move over time still reveals the colony's true total income. Rounding and the noise on everything else make that slow to read, and it never isolates a single cell. |
 
 ### 13.9 Time, randomness, save
 
@@ -421,7 +423,7 @@ and a promising cell about once a day.
 | `rngSeed` | Stored in the save; seeded PRNG (e.g. mulberry32) | Every roll comes from state, so the advance stays pure and tests can reproduce exact outcomes. |
 | `uiTickMs` | 1000 | Pool and timers visibly move while the page is open, using the same advance function. |
 | `autosaveMs` | 15000, plus after every action and on `pagehide` | Closing the tab loses at most a few seconds, and computed offline progress covers even that. |
-| `saveKey` / `schemaVersion` | `cell-game.save` / 1 | Versioned from the start (`CLAUDE.md`). |
+| `saveKey` / `schemaVersion` | `cell-game.save` / 3 | Versioned from the start (`CLAUDE.md`). v2 added `sessionNumber` (seeds the §13.8 noise); v3 added `startedAtMs` (the header's day count). |
 
 ### 13.10 A worked first two days
 
@@ -450,58 +452,73 @@ day 2.
 About 72 columns, monospace, no color (color arrives in Era 2). The membrane's slots are
 numbered 1–9, reading left to right and top to bottom.
 
+This is the screen as the renderer draws it (generated from the renderer's test fixture,
+so it can't drift from the code):
+
 ```
- CELL-GAME   Era 1 · Prokaryote                              day 3  08:14
- ========================================================================
-    .        .    .          .       .     .         .           .
-       .   +-----------------------------+      .          .
-   .       |                             |   .       .
-           |   [o]       o         8     |        .            .
-     .     |                             |  .
-           |    o        ?         o     |      .       .
-   .       |                             |                   .
-           |    o                  o     |   .
-      .    |                             |       .       .
-           +-----------------------------+  .        .
-     .          .       .    .        .        .              .
- ========================================================================
- nutrients  28.4 / 54     +3.3 N/h     full in 7h 51m
+ CELL-GAME   Era 1 · Prokaryote              day 3   Tue 22 Sep  08:14
+ =======================================================================
+                       .                  .                      .
+           +-----------------------------+
+           |                             |           .       .
+           |   [o]        o         8    |    .
+           |                             |
+   .       |    o         ?         o    |         .
+  .        |                             |                          .
+           |    o         -         o    | .                 .
+      .    |                             |         .               .
+       .   +-----------------------------+  .                   .
+     ..                                              .
+ =======================================================================
+ nutrients  28.4 / 54     +3.26 N/h     full in 7h51m
  cells 7/9    dividing 1    highest generation 11
- ------------------------------------------------------------------------
-  slot  cell  gen  intake  upkeep    net   div time   state
-  > 1   c41    11    1.42    0.76  +0.66     ~5h50m
-    2   c38    10    1.05    0.61  +0.44     ~6h20m
-    3   c44    10    1.18    0.66  +0.52     ~6h05m   dividing, 5h58m left
-    4   c33     9    0.97    0.59  +0.38     ~6h10m
-    6   c40    11    1.21    0.62  +0.59     ~9h25m
-    7   c42    11    0.78    0.54  +0.24     ~6h00m
-    9   c39    10    1.10    0.67  +0.43     ~4h55m
- ------------------------------------------------------------------------
- 08:13        c44 began dividing (-12 N)
- 08:12        c35 culled (+3 N)
- 03:40        c37 split: c42 -> slot 7, c43 not viable
- d2 21:05     c30 split: c40 -> slot 6, c41 -> slot 1
- ------------------------------------------------------------------------
+ -----------------------------------------------------------------------
+ slot  cell  gen intake upkeep    net div time state
+ > 1   c41    11   1.42   0.76  +0.66   ~5h50m
+   2   c38    10   1.05   0.61  +0.44   ~6h20m
+   3   c44    10   1.18   0.66  +0.52   ~6h05m splits in 5h58m
+   4   c33     9   0.97   0.59  +0.38   ~6h10m
+   5   reserved for a daughter of c44
+   6   c40    11   1.21   0.62  +0.59   ~9h25m
+   7   c42    11   0.78   0.54  +0.24   ~6h00m
+   8   empty
+   9   c39    10   1.10   0.67  +0.43   ~4h55m
+ -----------------------------------------------------------------------
  [1-9] select   [d] divide -12 N   [c] cull +3 N   [i] rules   [?] help
+ -----------------------------------------------------------------------
+ 03:40      c37 split: c42 -> slot 7, a daughter was not viable
+ 08:12      c35 culled (+3 N)
+ 08:13      c44 began dividing (-12 N)
+ 08:14      welcome back (away 9h12m)
 ```
 
 | Glyph | Meaning |
 | --- | --- |
 | `o` | A living cell |
-| `[o]` | The selected cell (also marked `>` in the list) |
+| `[o]` | The selected slot (the cell in it is also marked `>` in the list) |
 | `8` | A cell mid-fission: two lobes pinching apart |
 | `?` | The slot reserved for a daughter still to come |
-| blank | A free slot |
+| `-` | An empty slot. All nine positions show at all times, so the 3×3 grid and its tap targets are always readable. `-` is never used for nutrients, which only appear outside the membrane. |
 | `.` outside the membrane | Nutrients in the pool. Density is pool ÷ cap, around 40 dots when full. Decoration drawn by the renderer; it doesn't need to be in the config. |
 
-The screen shows a real trade-off: c40 (slot 6) has the best net yield but divides
-slowly, and c42 (slot 7) is the obvious cull. The list is phenotype only, and the
-numbers carry ±5% noise.
+**Layout.** The header shows the day count (day 1 is the first 24 hours after the game
+began, from `startedAtMs`) and the local date and time. The cell list always has nine
+rows, one per slot. An empty or reserved slot's note starts in the cell column, and a
+dividing cell's `state` sits one space after `div time`, so the list reads as one tight
+block. The command line sits at a fixed row directly under the list. Everything of
+variable length comes after it: a message (at most 2 lines), then the most recent log
+entries (at most 4). The controls never move, and no blank space is held open for lines
+that don't exist yet.
 
-**Controls.** Number keys or a click select a slot. `d` divides the selected cell (if
-there's a free slot and enough nutrients). `c` culls it, and asks for a second `c` to
-confirm. `i` opens the rules screen (13.8). The event log keeps the last 50 entries and
-shows the most recent 4.
+The screen shows a real trade-off: c40 (slot 6) has the best net yield but divides
+slowly, and c42 (slot 7) is the obvious cull. Everything in the list and header is a
+measurement (§13.8): the header rate is the sum of the nets shown, not the true total.
+
+**Controls.** Number keys, a click, or a tap select a slot (grid position or list row).
+`d` divides the selected cell (if there's a free slot and enough nutrients). `c` culls
+it, and asks for a second `c` to confirm. `i` opens the rules screen (§13.8), and `?`
+shows help. On a touchscreen, the commands on the command line are tappable. The event
+log keeps the last 50 entries and shows the most recent 4.
 
 ### 13.12 Deliberately outside the slice
 

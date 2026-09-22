@@ -44,7 +44,10 @@ test('no tunable numbers outside config.js', () => {
   // 0 and 1 are structural (empty, first, "1 + delta"). rng.js holds the mulberry32
   // and hashing algorithm constants, which are not tuning values.
   const exempt = new Set(['config.js', 'rng.js']);
-  const named = { 'render.js': 'LAYOUT', 'view.js': 'FORMAT' };
+  // MIGRATIONS is exempt for the opposite reason: a migration step is frozen history.
+  // Its version keys and any default it writes must stay fixed even when the config is
+  // retuned, so it must hardcode them rather than read CONFIG.
+  const named = { 'render.js': 'LAYOUT', 'view.js': 'FORMAT', 'save.js': 'MIGRATIONS' };
   for (const { file, code } of sources) {
     if (exempt.has(file)) continue;
     const checked = named[file] ? withoutNamedBlock(code, named[file]) : code;
@@ -58,6 +61,12 @@ test('the presentation blocks exist, so the check above is not vacuous', () => {
   assert.match(raw['view.js'], /const FORMAT = Object\.freeze\(\{/);
   assert.notEqual(withoutNamedBlock(raw['render.js'], 'LAYOUT'), raw['render.js']);
   assert.notEqual(withoutNamedBlock(raw['view.js'], 'FORMAT'), raw['view.js']);
+  assert.notEqual(withoutNamedBlock(raw['save.js'], 'MIGRATIONS'), raw['save.js']);
+  assert.doesNotMatch(
+    raw['save.js'].match(/const MIGRATIONS = Object\.freeze\(\{[\s\S]*?\n\}\);/)[0],
+    /CONFIG/,
+    'migrations must not read the live config',
+  );
 });
 
 test('nothing but main.js references the DOM', () => {
