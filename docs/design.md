@@ -106,6 +106,32 @@ that organisms "try" to improve or evolve traits because they need them. Played 
 enough, this game teaches the real principle through play — random variation, filtered
 by selection — with no explanation required.
 
+## 4a. The selection interaction
+
+The player's two verbs are **choose which cells divide** (positive selection) and
+**cull** (negative selection). Both, not one: this is what a breeder actually does, and
+together they are the player's entire toolkit. Everything else in the game feeds these
+two decisions.
+
+**Space couples the two verbs.** The membrane has a hard cap on slots, justified by the
+surface-area-to-volume constraint. Division needs a free slot, so culling is how room is
+made. Culling is therefore not a separate chore; it is the cost of dividing. One
+constraint drives both verbs and no extra machinery is needed.
+
+**Culling returns resources.** A culled cell returns a fraction of its nutrients, which
+is what really happens when a cell is broken down and recycled. This gives negative
+selection an economic role and means a bad mutation is never a pure loss.
+
+**Selection is on phenotype, not genotype.** Cells display observable proxies — "absorbs
+quickly", "divides slowly" — while the underlying traits stay hidden. Breeders cannot
+see genes either. This makes selection genuinely uncertain rather than a stat-sheet
+comparison, and it is the accurate model.
+
+**Known scaling problem.** Per-cell decisions work at nine cells and become tedious at
+ninety. The intended answer is selection *policies* introduced in a later era ("cull
+anything below this absorption rate"), moving the player from clicking units to setting
+rules. Parked in `docs/ideas.md`; not part of the prototype.
+
 ## 4b. Simulation stance
 
 This should feel as much like a simulation of biology as a game: a system the player

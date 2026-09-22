@@ -11,6 +11,15 @@ once the simulation engine exists, since it is the same engine with the progress
 layer switched off. Considered and set aside on 2026-09-22 because a sandbox has no
 story that develops, which is central to the main game.
 
+## Selection policies (Era 4+)
+
+Per-cell selection works at nine cells and becomes tedious at ninety. Rather than
+scaling the clicking, a later era unlocks standing rules the player sets once - "cull
+anything below this absorption rate", "always divide the fastest absorber". This moves
+the player from controlling units to controlling processes, which is the sixth pillar,
+and is a clean new verb for an era to introduce. Not part of the prototype; the slice
+runs at a population small enough to handle by hand.
+
 ## Other
 
 - Field notes: short real-biology notes shown when an era unlocks (in the design doc;

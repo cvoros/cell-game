@@ -46,8 +46,15 @@ When a decision is reversed, add a new entry rather than editing the old one.
   Pillar 6 reworded from "simulation first" to "simulation texture, authored arc" so it
   can't be read as an argument for a sandbox.
 
+- **Selection interaction: both culling and choosing which cells divide.** This is what a
+  breeder actually does, and the two verbs are the player's whole toolkit. Three
+  consequences decided with it: (a) a hard cap on membrane slots couples the verbs, so
+  culling is how room is made for division rather than a separate chore; (b) a culled
+  cell returns a fraction of its nutrients, matching real recycling and giving negative
+  selection an economic role; (c) selection is on phenotype - cells show observable
+  proxies while underlying traits stay hidden, as breeders cannot see genes.
+
 ### Pending
 
 - Earned vs. progression-tied graphics.
-- Exact selection interaction (culling, choosing dividers, or both).
 - Target check-in frequency, which sets timers and caps.
