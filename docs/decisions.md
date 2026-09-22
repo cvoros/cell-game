@@ -32,6 +32,20 @@ When a decision is reversed, add a new entry rather than editing the old one.
   offline progress uses the device clock, a player can cheat by changing it. Acceptable
   for a game played by the author and a couple of friends.
 
+- **Simulation first.** The game should read as a simulation of biology that the player
+  nudges and observes, not a reward dispenser. Player input is selection pressure and
+  environmental parameters; instrumentation (lineage tree, trait frequencies, event log)
+  is the payoff; numbers are shown, not hidden. Added as a sixth pillar.
+- **Mini-games reframed as observable events.** A slot-machine mutation roll conflicts
+  with the simulation stance. Chance stays, but as events whose outcome is determined by
+  the population's existing traits and watched rather than tapped.
+
+- **Authored arc, emergent detail.** Era transitions fire on real simulation state rather
+  than a checklist, and detail within an era emerges from the rules. Pure emergence is a
+  sandbox, and a sandbox has no arc — parked as a possible mode, not the main line.
+  Pillar 6 reworded from "simulation first" to "simulation texture, authored arc" so it
+  can't be read as an argument for a sandbox.
+
 ### Pending
 
 - Earned vs. progression-tied graphics.

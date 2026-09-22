@@ -49,6 +49,7 @@ Every feature should serve at least one. A feature that serves none is out of sc
 | Biologically honest | True in spirit and honest in direction. Timescales and chemistry compress, but nothing teaches a false principle. |
 | Growing complexity | Begins with one verb and one resource. New mechanics arrive on a planned schedule tied to real evolutionary milestones. |
 | Evolving graphics | ASCII at the start, modern 2D at the end. Rendering style advances with the organism. |
+| Simulation first | The player controls processes and parameters, not units. Rules run consistently whether or not anyone is watching; outcomes are observed rather than awarded. |
 
 ## 3. Core loop
 
@@ -104,6 +105,46 @@ does the selecting, which is also how Pocket Frogs breeding works.
 that organisms "try" to improve or evolve traits because they need them. Played long
 enough, this game teaches the real principle through play — random variation, filtered
 by selection — with no explanation required.
+
+## 4b. Simulation stance
+
+This should feel as much like a simulation of biology as a game: a system the player
+nudges and then observes, not a set of buttons that dispense rewards.
+
+**What that means concretely**
+
+- **The player controls processes and parameters, not units.** The inputs are selection
+  pressure (which lineages continue, which are culled) and a few environmental knobs.
+  There is no "build an absorber cell" button.
+- **Instrumentation is the reward.** A lineage tree, trait frequency over generations,
+  population and resource graphs, and an event log. The satisfaction is seeing what
+  happened and understanding why. All of this is cheap to render in ASCII.
+- **Nothing is scripted.** No congratulatory pop-ups, no staged tutorial beats. The same
+  rules run whether or not anyone is watching.
+- **Numbers are visible.** Mutation rates, diffusion values, and odds are shown rather
+  than hidden. Hiding them would make this a game with a biology skin.
+- **Events replace mini-games where possible.** Rather than a slot machine, a phage
+  bloom arrives on a probability and the population's existing resistance determines the
+  outcome, which the player watches unfold.
+
+**Decided: authored arc, emergent detail**
+
+Eras are authored and the game has a direction. Era transitions fire on real simulation
+state (for example, "60% of the population carries oxygen tolerance") rather than on a
+checklist, and everything within an era is emergent. The rails stay; what happens
+between them is not scripted.
+
+Pure emergence — unlimited dish, no eras, see what happens — is a different game. It is
+parked as a possible sandbox mode once the simulation exists (see `docs/ideas.md`),
+not as the main line.
+
+**Reference points**
+
+- *Niche - a genetics survival game* — real Mendelian genetics driving survival; the
+  closest existing thing to this design.
+- *Creatures* (Steve Grand, 1996) — simulated neural networks and biochemistry; a study
+  in how much simulation a player will sit with.
+- *SimEarth*, *SimLife* — process-control sims with visible parameters.
 
 ## 5. Era map
 

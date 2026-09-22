@@ -23,6 +23,10 @@ Any feature must serve at least one of these. A feature that serves none is out 
 3. **Biologically honest** — compress freely, but never teach a false principle.
 4. **Growing complexity** — one new verb per era, on a planned schedule.
 5. **Evolving graphics** — ASCII first, modern 2D last.
+6. **Simulation texture, authored arc** — it should behave like a simulation: the player
+   controls processes and parameters rather than units, the same rules run whether or not
+   anyone is watching, instrumentation is the reward, numbers are visible. But the era
+   sequence is authored and the game is going somewhere. Not a sandbox.
 
 ## Architecture rules
 
