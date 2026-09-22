@@ -11,7 +11,7 @@ gain complexity as the organism does.
 
 Working title is undecided. The repo codename is `cell-game` and does not need to change.
 
-Full design: `docs/design.md` (v0.1). Decisions: `docs/decisions.md`. Current status:
+Full design: `docs/design.md` (v1.0). Decisions: `docs/decisions.md`. Current status:
 `docs/state.md`.
 
 ## Design pillars

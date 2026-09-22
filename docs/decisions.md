@@ -54,7 +54,30 @@ When a decision is reversed, add a new entry rather than editing the old one.
   selection an economic role; (c) selection is on phenotype - cells show observable
   proxies while underlying traits stay hidden, as breeders cannot see genes.
 
+- **Era 1 spec written with placeholder numbers** (`design.md` §13; design doc now v1.0).
+  Structural choices made along the way:
+  - **Two heritable traits (uptake, division time), with upkeep derived** from them
+    rather than stored. Uptake has quadratic upkeep, so it has an optimum rather than
+    "more is better". Fast division costs energy (the rate–yield trade-off). A trade-off
+    on each trait keeps selection a judgment.
+  - **Mutation rate is fixed, not tied to division speed.** A speed–accuracy link was
+    considered and dropped: the real evidence is mixed, and pillar 3 says don't teach
+    what isn't settled.
+  - **Mutation effects follow a deleterious-skewed distribution** (50% silent, 38%
+    harmful, 12% beneficial, with beneficial effects smaller). Unselected lineages
+    decay, which is what gives selection a purpose.
+  - **Binary fission consumes the parent.** Two mutated daughters replace it; there is
+    no unchanged "original" left.
+  - **"Numbers visible" vs. "phenotype only" resolved:** the rules and odds are public
+    on a rules screen; an individual cell's traits are hidden and shown only as measured
+    values with 5% noise.
+  - **Starvation and extinction are real.** The least efficient cell starves when the
+    pool hits zero. If everything dies, the dish is recolonized by a base founder rather
+    than showing a game-over screen.
+  - **Target check-in placeholder: 12 h.** Storage and division cost are derived from
+    it. Still pending confirmation in playtest.
+
 ### Pending
 
 - Earned vs. progression-tied graphics.
-- Target check-in frequency, which sets timers and caps.
+- Target check-in frequency: 12 h placeholder in use; confirm in playtest.

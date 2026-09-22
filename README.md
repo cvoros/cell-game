@@ -10,5 +10,5 @@ complexity as the organism does.
 - Current state: `docs/state.md`
 - Project instructions for Claude Code: `CLAUDE.md`
 
-Status: pre-prototype. Next milestone is an Era 1 spec with real numbers, then a
+Status: pre-prototype. The Era 1 spec is written (design doc §13); next milestone is a
 playable vertical slice.

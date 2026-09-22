@@ -1,9 +1,9 @@
 # Design document — cell-game (working title TBD)
 
-Version 0.1 · 2026-09-22 · Chris Voros
+Version 1.0 · 2026-09-22 · Chris Voros
 
-Status: direction set, Era 1 details pending. This becomes v1.0 when the Era 1 spec is
-written with real numbers.
+Status: direction set; Era 1 specified with placeholder numbers (§13). Next step is the
+vertical slice.
 
 ---
 
@@ -261,8 +261,8 @@ Evolution Ladder's era structure, with the Infection RTS's battles arriving late
 | Question | Why it matters |
 | --- | --- |
 | Earned or progression-tied graphics? | Shapes the renderer design and the trait system. |
-| How does the player select? | Culling, choosing which cells divide, or both. The central interaction; worth prototyping several versions. |
-| Target check-in frequency? | Sets division timers and storage caps. |
+| ~~How does the player select?~~ | Decided: both culling and choosing dividers (§4a). |
+| Target check-in frequency? | Sets division timers and storage caps. Placeholder of 12 h used in §13; confirm in playtest. |
 | What happens after Era 7? | Endless climb, ecosystem sandbox, or a defined ending. |
 | Where does the battle element live? | Phage mini-games early, predation in Era 7, or an immune-system faction. |
 | Platform? | Browser-first assumed for the prototype; mobile later is possible. |
@@ -308,3 +308,219 @@ The era map is the first version of that schedule.
 - Ask for one feature per session, not "build the game."
 - Research only when a question needs it; this biology is stable textbook material.
 - Update this document when decisions change, so it stays the single source of truth.
+
+## 13. Era 1 specification (prototype)
+
+Everything the vertical slice needs in order to be built. **Every value is a
+placeholder**, chosen to be self-consistent rather than tuned. All of them belong in the
+single config table (`CLAUDE.md`), and the keys below are the proposed names in that
+table. Units: nutrients (N), hours (h).
+
+### 13.1 The model in one paragraph
+
+The colony lives inside a membrane with nine slots. Every cell continuously absorbs
+nutrients into one shared pool and pays its upkeep out of that pool. The pool is capped
+by how much the cells can store. Dividing a cell costs nutrients up front and takes real
+time. When it finishes, the parent is gone and two daughters stand in its place, each
+with a chance of mutations to its two heritable traits. The player sees each cell's
+measured performance, never its traits, and does exactly two things: chooses which cells
+divide, and culls cells to free slots. Everything that happens between check-ins is
+computed from elapsed time.
+
+### 13.2 Traits and upkeep
+
+Two heritable traits make up the genotype. The player never sees them directly.
+
+| Key | Base | Range | Why |
+| --- | --- | --- | --- |
+| `uptake` (U) | 1.0 N/h | 0.1 – 6.0 | Gross absorption. The one trait the economy obviously rewards, so it needs a cost (below). |
+| `divisionHours` (T) | 6 h | 1 – 48 | Two divisions fit within one check-in interval at base; harmful drift pushes T past 12 h, where slowness starts to cost the player. |
+
+Upkeep is derived from the traits, never stored:
+
+```
+upkeep = upkeepBase + upkeepUptakeCoeff × U² + upkeepSpeedCoeff / T
+net    = U − upkeep
+```
+
+| Key | Value | Why |
+| --- | --- | --- |
+| `upkeepBase` | 0.30 N/h | Staying alive costs something even when doing nothing. |
+| `upkeepUptakeCoeff` | 0.15 | Energy budget (§6): more transport machinery costs more, with diminishing returns. Net peaks at U ≈ 3.3, about 3× base, so "absorbs more" stops paying well before the range limit. |
+| `upkeepSpeedCoeff` | 0.9 | Rate–yield trade-off, which is real in microbes: growing fast is wasteful. At T = 3 h, net falls from 0.40 to 0.25. |
+
+At base: upkeep 0.60, **net +0.40 N/h per cell**. A cell whose uptake falls below about
+0.5 has negative net income and will starve (see 13.7).
+
+### 13.3 Nutrients and storage
+
+| Key | Value | Why |
+| --- | --- | --- |
+| `startingNutrients` | 36 N | Three divisions' worth. A lone cell earns only 0.4 N/h, so without this reserve the first day is dead air. |
+| `storagePerCell` | 6 N | At base net, a cell fills its share in 15 h, slightly more than the 12 h target interval (§3 tuning principle). |
+| `storageFloor` | 36 N | Cap = max(floor, 6 × cells), so a young colony is never capped below its own starting reserve. |
+| `targetCheckInHours` | 12 | Placeholder for the pending check-in-frequency decision: twice a day. Storage and division cost are both derived from it. |
+
+### 13.4 Membrane and division
+
+| Key | Value | Why |
+| --- | --- | --- |
+| `membraneSlots` | 9 (3×3) | Small enough to judge every cell by hand (`docs/ideas.md`). The surface-area-to-volume constraint is the in-world reason. |
+| `startingCells` | 1 | The game starts with one cell (§1). |
+| `divisionCost` | 12 N, paid up front | With the colony full, the slot rule allows at most 4 divisions per check-in (cull 4, then 4 of the remaining 5 divide). That costs 36 N net of refunds, against about 43 N of income per 12 h, so nutrients and slots bind at about the same point. |
+| Slot rule | A division needs one free slot, reserved at start | This is the coupling from §4a: no free slot, no division, so culling makes room. |
+| Fission | The parent is replaced by two daughters, one in the parent's slot and one in the reserved slot | Binary fission: there is no "original" left over. Both copies are fresh draws, so every division is a comparison between siblings. |
+| While dividing | Keeps absorbing; cannot be culled or divided again | Fission is a commitment. Avoids refund edge cases. |
+
+### 13.5 Mutation
+
+Rolled independently for each daughter at the moment of fission.
+
+| Key | Value | Why |
+| --- | --- | --- |
+| `lethalChance` | 0.03 per daughter | The daughter is not viable. Its slot is freed and no nutrients come back. Natural selection is visible from the first day, not only from later eras. |
+| `mutationChancePerTrait` | 0.30 per trait | About half of daughters (1 − 0.7² ≈ 51%) differ from their parent. Every division is a small reveal, but faithful copies stay common. |
+| `mutationEffects` | 50% silent (δ = 0) · 38% harmful, δ ∈ U[−25%, −2%] · 12% beneficial, δ ∈ U[+2%, +12%] | The real distribution of fitness effects: most changes do nothing, harmful ones outnumber and outweigh beneficial ones. Unselected lineages slowly decay, which is exactly what gives selection its purpose. |
+| Applying δ | U ← U × (1 + δ); T ← T ÷ (1 + δ) | Positive δ always means "better at that trait": more uptake, faster division. Results are clamped to the trait ranges. |
+
+With the colony full, the player gets up to 4 divisions per check-in, which means 8
+daughters and 16 trait rolls. On average that's about 0.6 beneficial mutations, 1.8
+harmful ones, and 0.24 non-viable daughters per check-in: something to cull every visit,
+and a promising cell about once a day.
+
+### 13.6 Culling
+
+| Key | Value | Why |
+| --- | --- | --- |
+| `cullRefund` | 3 N (25% of division cost) | A broken-down cell is recycled (§4a). Kept below division cost so constant churn is never free. |
+| Timing | Instant; any cell except one that is dividing | Culling is the cheap, fast verb, and division is the slow, costly one. |
+| Last cell | Can be culled | Honest and self-correcting (see extinction below). |
+
+### 13.7 Natural selection without the player
+
+| Key | Value | Why |
+| --- | --- | --- |
+| Starvation | When the pool is at 0 and colony net is negative, the cell with the lowest net dies. Repeat until net ≥ 0. | The least efficient cells starve first. Natural selection with no scripted event behind it. |
+| Extinction | If no cells remain, a new founder with base traits appears in slot 5, and the log reads "the dish is recolonized" | Keeps the prototype playable without a game-over screen. Honest, because the sea is full of microbes. |
+
+### 13.8 What the player sees (phenotype)
+
+| Key | Value | Why |
+| --- | --- | --- |
+| Shown per cell | Measured intake, upkeep, net, and division time | Performance, never genotype (§4a). Every number the player compares is one a microbiologist could measure. |
+| `displayNoise` | SD 5%, multiplicative, applied separately to each value | Measurements are imperfect. A 15% gap is obvious; a 5% gap needs a few check-ins before it can be trusted, which makes selection a judgment rather than a sort. |
+| Noise refresh | Rerolled per cell once per session, seeded by (cell id, session number) | Repeated looks agree within one visit, so the player can't reroll by refreshing. Across visits, the player builds confidence. |
+| Rules screen | All config values and formulas on this page are visible in-game (`[i]`) | Pillar 6: numbers are visible. The rules are public; only the individual cell's genes are hidden. |
+
+### 13.9 Time, randomness, save
+
+| Key | Value | Why |
+| --- | --- | --- |
+| Offline advance | Event-driven: the pool changes linearly between events (division completes, starvation, cap reached), each solved in closed form | Keeps `(state, elapsedMs) -> state` exact and cheap for any absence length. No per-tick simulation is needed. |
+| Negative elapsed time | Treated as 0 | The device clock moved backwards. Cheating the clock forwards is accepted (decision log). |
+| `rngSeed` | Stored in the save; seeded PRNG (e.g. mulberry32) | Every roll comes from state, so the advance stays pure and tests can reproduce exact outcomes. |
+| `uiTickMs` | 1000 | Pool and timers visibly move while the page is open, using the same advance function. |
+| `autosaveMs` | 15000, plus after every action and on `pagehide` | Closing the tab loses at most a few seconds, and computed offline progress covers even that. |
+| `saveKey` / `schemaVersion` | `cell-game.save` / 1 | Versioned from the start (`CLAUDE.md`). |
+
+### 13.10 A worked first two days
+
+Assumes check-ins at 08:00 and 20:00, the player dividing whatever is affordable, all
+cells at base traits, and no mutations. It's a sanity check on the numbers, not a
+prediction.
+
+| Check-in | Cells | Pool on arrival | Action | Pool after |
+| --- | --- | --- | --- | --- |
+| Day 0 08:00 | 1 | 36.0 | Divide 1 | 24.0 |
+| Day 0 20:00 | 2 | 31.2 | Divide 2 | 7.2 |
+| Day 1 08:00 | 4 | 21.6 | Divide 1 | 9.6 |
+| Day 1 20:00 | 5 | 31.2 | Divide 2 | 7.2 |
+| Day 2 08:00 | 7 | 36.0 | Divide 2 (colony now full) | 12.0 |
+| Day 2 20:00 | 9 | 50.4 | Cull 4, divide 4 (the most the slots allow) | 14.4 |
+
+From here, about 43 N arrives per 12 h. Up to 36 N of it goes to turnover, and the cap
+of 54 fills in 15 h. The
+first sibling comparison comes at the second check-in, and the membrane fills on
+day 2.
+
+### 13.11 The ASCII screen
+
+About 72 columns, monospace, no color (color arrives in Era 2). The membrane's slots are
+numbered 1–9, reading left to right and top to bottom.
+
+```
+ CELL-GAME   Era 1 · Prokaryote                              day 3  08:14
+ ========================================================================
+    .        .    .          .       .     .         .           .
+       .   +-----------------------------+      .          .
+   .       |                             |   .       .
+           |   [o]       o         8     |        .            .
+     .     |                             |  .
+           |    o        ?         o     |      .       .
+   .       |                             |                   .
+           |    o                  o     |   .
+      .    |                             |       .       .
+           +-----------------------------+  .        .
+     .          .       .    .        .        .              .
+ ========================================================================
+ nutrients  28.4 / 42     +3.3 N/h     full in 4h 10m
+ cells 7/9    dividing 1    highest generation 11
+ ------------------------------------------------------------------------
+  slot  cell  gen  intake  upkeep    net   div time   state
+  > 1   c41    11    1.42    0.76  +0.66     ~5h50m
+    2   c38    10    1.05    0.61  +0.44     ~6h20m
+    3   c44    10    1.18    0.66  +0.52     ~6h05m   dividing, 5h58m left
+    4   c33     9    0.97    0.59  +0.38     ~6h10m
+    6   c40    11    1.21    0.62  +0.59     ~9h25m
+    7   c42    11    0.78    0.54  +0.24     ~6h00m
+    9   c39    10    1.10    0.67  +0.43     ~4h55m
+ ------------------------------------------------------------------------
+ 08:13        c44 began dividing (-12 N)
+ 08:12        c35 culled (+3 N)
+ 03:40        c37 split: c42 -> slot 7, c43 not viable
+ d2 21:05     c30 split: c40 -> slot 6, c41 -> slot 1
+ ------------------------------------------------------------------------
+ [1-9] select   [d] divide -12 N   [c] cull +3 N   [i] rules   [?] help
+```
+
+| Glyph | Meaning |
+| --- | --- |
+| `o` | A living cell |
+| `[o]` | The selected cell (also marked `>` in the list) |
+| `8` | A cell mid-fission: two lobes pinching apart |
+| `?` | The slot reserved for a daughter still to come |
+| blank | A free slot |
+| `.` outside the membrane | Nutrients in the pool. Density is pool ÷ cap, around 40 dots when full. Decoration drawn by the renderer; it doesn't need to be in the config. |
+
+The screen shows a real trade-off: c40 (slot 6) has the best net yield but divides
+slowly, and c42 (slot 7) is the obvious cull. The list is phenotype only, and the
+numbers carry ±5% noise.
+
+**Controls.** Number keys or a click select a slot. `d` divides the selected cell (if
+there's a free slot and enough nutrients). `c` culls it, and asks for a second `c` to
+confirm. `i` opens the rules screen (13.8). The event log keeps the last 50 entries and
+shows the most recent 4.
+
+### 13.12 Deliberately outside the slice
+
+- **Lineage tree view** — stretch goal. The slice stores each cell's parent id, so the
+  tree can be drawn later without changing the save shape.
+- **Trait-frequency and population graphs** — Era 1 instrumentation after the slice
+  proves fun.
+- **Era 2 trigger.** Placeholder: world oxygen starts rising on day 7 of play. That's
+  world state, not colony state, because the Great Oxidation was caused by other
+  organisms. The slice ends before it.
+- **Events, horizontal gene transfer, selection policies** — later eras
+  (`docs/ideas.md`).
+
+### 13.13 Balance risks to watch in playtest
+
+- **The cap tightens as the colony improves.** At net 1.0 N/h per cell, nine cells fill
+  54 N in 6 h, which quietly demands more frequent check-ins. Candidate fixes: a larger
+  `storagePerCell`, or storage as a third trait.
+- **Beneficial mutations may be too subtle.** An average +7% against 5% noise might not
+  read as a discovery. Try a larger beneficial range or lower noise.
+- **Division time barely matters to a twice-a-day player** until T drifts past 12 h. The
+  harmful bias is meant to cause that drift. Confirm it actually happens.
+- **The first session has one action.** If day 0 feels empty, raise `startingNutrients`
+  or add a second starting cell rather than scripting anything.
