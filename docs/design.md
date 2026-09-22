@@ -312,15 +312,15 @@ The era map is the first version of that schedule.
 ## 13. Era 1 specification (prototype)
 
 Everything the vertical slice needs in order to be built. **Every value is a
-placeholder**, chosen to be self-consistent rather than tuned. All of them belong in the
-single config table (`CLAUDE.md`), and the keys below are the proposed names in that
-table. Units: nutrients (N), hours (h).
+placeholder**, chosen to be self-consistent rather than tuned. All of them belong in the game's
+single config module, as `CLAUDE.md` requires, and the keys below are the proposed
+names in it. Units: nutrients (N), hours (h).
 
 ### 13.1 The model in one paragraph
 
 The colony lives inside a membrane with nine slots. Every cell continuously absorbs
 nutrients into one shared pool and pays its upkeep out of that pool. The pool is capped
-by how much the cells can store. Dividing a cell costs nutrients up front and takes real
+by the membrane's storage volume. Dividing a cell costs nutrients up front and takes real
 time. When it finishes, the parent is gone and two daughters stand in its place, each
 with a chance of mutations to its two heritable traits. The player sees each cell's
 measured performance, never its traits, and does exactly two things: chooses which cells
@@ -357,8 +357,8 @@ At base: upkeep 0.60, **net +0.40 N/h per cell**. A cell whose uptake falls belo
 | Key | Value | Why |
 | --- | --- | --- |
 | `startingNutrients` | 36 N | Three divisions' worth. A lone cell earns only 0.4 N/h, so without this reserve the first day is dead air. |
-| `storagePerCell` | 6 N | At base net, a cell fills its share in 15 h, slightly more than the 12 h target interval (§3 tuning principle). |
-| `storageFloor` | 36 N | Cap = max(floor, 6 × cells), so a young colony is never capped below its own starting reserve. |
+| `storagePerCell` | 6 N per slot | Cap = `storagePerCell` × `membraneSlots` = **54 N, constant in Era 1**. Storage is membrane volume, which doesn't shrink when a cell dies, so culling never costs capacity. A full base colony (3.6 N/h) fills it in 15 h, slightly more than the 12 h target interval (§3 tuning principle). Later vacuole upgrades raise `storagePerCell`. |
+| Clipping | Anything that would take the pool above the cap (income or a cull refund) is lost | One simple rule with no edge cases. A cull made at a full pool wastes its refund, which is a minor cost of arriving late. |
 | `targetCheckInHours` | 12 | Placeholder for the pending check-in-frequency decision: twice a day. Storage and division cost are both derived from it. |
 
 ### 13.4 Membrane and division
@@ -367,7 +367,7 @@ At base: upkeep 0.60, **net +0.40 N/h per cell**. A cell whose uptake falls belo
 | --- | --- | --- |
 | `membraneSlots` | 9 (3×3) | Small enough to judge every cell by hand (`docs/ideas.md`). The surface-area-to-volume constraint is the in-world reason. |
 | `startingCells` | 1 | The game starts with one cell (§1). |
-| `divisionCost` | 12 N, paid up front | With the colony full, the slot rule allows at most 4 divisions per check-in (cull 4, then 4 of the remaining 5 divide). That costs 36 N net of refunds, against about 43 N of income per 12 h, so nutrients and slots bind at about the same point. |
+| `divisionCost` | 12 N, paid up front | With the colony full, the slot rule allows at most 4 divisions per check-in (cull 4, then 4 of the remaining 5 divide). That costs 36 N net of refunds. Culled cells earn nothing while their replacements divide, so income under full turnover is 33.6 N per 12 h, and steady play averages 3.7 replacements per check-in: nutrients and slots bind at about the same point. |
 | Slot rule | A division needs one free slot, reserved at start | This is the coupling from §4a: no free slot, no division, so culling makes room. |
 | Fission | The parent is replaced by two daughters, one in the parent's slot and one in the reserved slot | Binary fission: there is no "original" left over. Both copies are fresh draws, so every division is a comparison between siblings. |
 | While dividing | Keeps absorbing; cannot be culled or divided again | Fission is a commitment. Avoids refund edge cases. |
@@ -379,7 +379,7 @@ Rolled independently for each daughter at the moment of fission.
 | Key | Value | Why |
 | --- | --- | --- |
 | `lethalChance` | 0.03 per daughter | The daughter is not viable. Its slot is freed and no nutrients come back. Natural selection is visible from the first day, not only from later eras. |
-| `mutationChancePerTrait` | 0.30 per trait | About half of daughters (1 − 0.7² ≈ 51%) differ from their parent. Every division is a small reveal, but faithful copies stay common. |
+| `mutationChancePerTrait` | 0.30 per trait | Half of mutations are silent, so a daughter's traits actually differ from its parent's about one time in four (1 − (1 − 0.30 × 0.5)² ≈ 28%). About half of divisions (1 − 0.85⁴ ≈ 48%) produce at least one changed daughter: a reveal every other division, with faithful copies the norm. |
 | `mutationEffects` | 50% silent (δ = 0) · 38% harmful, δ ∈ U[−25%, −2%] · 12% beneficial, δ ∈ U[+2%, +12%] | The real distribution of fitness effects: most changes do nothing, harmful ones outnumber and outweigh beneficial ones. Unselected lineages slowly decay, which is exactly what gives selection its purpose. |
 | Applying δ | U ← U × (1 + δ); T ← T ÷ (1 + δ) | Positive δ always means "better at that trait": more uptake, faster division. Results are clamped to the trait ranges. |
 
@@ -436,10 +436,12 @@ prediction.
 | Day 1 08:00 | 4 | 21.6 | Divide 1 | 9.6 |
 | Day 1 20:00 | 5 | 31.2 | Divide 2 | 7.2 |
 | Day 2 08:00 | 7 | 36.0 | Divide 2 (colony now full) | 12.0 |
-| Day 2 20:00 | 9 | 50.4 | Cull 4, divide 4 (the most the slots allow) | 14.4 |
+| Day 2 20:00 | 9 | 50.4 | Cull 4 (+12 → 62.4, clipped to the 54 cap, so 8.4 N is lost), then divide 4 (the most the slots allow) | 6.0 |
 
-From here, about 43 N arrives per 12 h. Up to 36 N of it goes to turnover, and the cap
-of 54 fills in 15 h. The
+From here, the colony earns 33.6 N per 12 h while fully replacing: 5 cells for the 6 h
+of division, then 9. Four replacements cost 36 N, so over a week of steady play the
+player averages 3.7 replacements per check-in (a repeating 4, 4, 4, 3 pattern), and the
+cap is barely reached. The
 first sibling comparison comes at the second check-in, and the membrane fills on
 day 2.
 
@@ -463,7 +465,7 @@ numbered 1–9, reading left to right and top to bottom.
            +-----------------------------+  .        .
      .          .       .    .        .        .              .
  ========================================================================
- nutrients  28.4 / 42     +3.3 N/h     full in 4h 10m
+ nutrients  28.4 / 54     +3.3 N/h     full in 7h 51m
  cells 7/9    dividing 1    highest generation 11
  ------------------------------------------------------------------------
   slot  cell  gen  intake  upkeep    net   div time   state
@@ -509,15 +511,20 @@ shows the most recent 4.
   proves fun.
 - **Era 2 trigger.** Placeholder: world oxygen starts rising on day 7 of play. That's
   world state, not colony state, because the Great Oxidation was caused by other
-  organisms. The slice ends before it.
+  organisms. The slice ends before it. **Needs replacing before Era 2 is built:** a day
+  count is a wall-clock script, and eras are meant to change on simulation state (see
+  "Authored arc, emergent detail" in §4b). The replacement should be a condition on
+  world state, such as simulated oxygen producers reaching a threshold.
 - **Events, horizontal gene transfer, selection policies** — later eras
   (`docs/ideas.md`).
 
 ### 13.13 Balance risks to watch in playtest
 
-- **The cap tightens as the colony improves.** At net 1.0 N/h per cell, nine cells fill
-  54 N in 6 h, which quietly demands more frequent check-ins. Candidate fixes: a larger
-  `storagePerCell`, or storage as a third trait.
+- **The cap tightens as the colony improves.** The cap stays at 54 N while income
+  grows. At net 1.0 N/h per cell, nine cells fill it in 6 h, and even a colony fully
+  replacing 4 cells earns 84 N per 12 h. The excess is clipped, which quietly demands
+  more frequent check-ins. Candidate fixes: a larger `storagePerCell`, or storage as a
+  third trait (the vacuole path, pulled forward).
 - **Beneficial mutations may be too subtle.** An average +7% against 5% noise might not
   read as a discovery. Try a larger beneficial range or lower noise.
 - **Division time barely matters to a twice-a-day player** until T drifts past 12 h. The

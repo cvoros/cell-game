@@ -76,6 +76,15 @@ When a decision is reversed, add a new entry rather than editing the old one.
     than showing a game-over screen.
   - **Target check-in placeholder: 12 h.** Storage and division cost are derived from
     it. Still pending confirmation in playtest.
+- **The storage cap is tied to slots, not living cells**: cap = `storagePerCell` ×
+  `membraneSlots` = 54 N, constant in Era 1, and `storageFloor` is removed (found in
+  review of §13). The old max(36, 6 × cells) shrank on every cull, and the slot rule
+  forces culling before dividing, so the core verb destroyed nutrients. In the worked
+  table, 62.4 N was cut to 36 and only 3 divisions were affordable instead of 4. It also
+  rewarded dividing before culling, for no biological reason. Storage is membrane
+  volume, which doesn't shrink when a cell dies. Vacuole upgrades will raise
+  `storagePerCell`, so the upgrade path is kept. Anything over the cap is clipped,
+  including cull refunds.
 
 ### Pending
 

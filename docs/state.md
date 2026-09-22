@@ -26,9 +26,12 @@ markdown here is the source of truth.
   derived from both, giving a base net of +0.40 N/h per cell.
 - Division costs 12 N and replaces the parent with two daughters. Each daughter has a
   3% chance of not being viable and a 30% chance per trait of mutating (50% of those are
-  silent, 38% harmful, 12% beneficial).
-- Culling refunds 3 N. Cap = max(36, 6 × cells). The target check-in interval is a
-  12 h placeholder.
+  silent, 38% harmful, 12% beneficial). About 28% of daughters end up with changed
+  traits.
+- Culling refunds 3 N. Cap = 6 N per slot × 9 slots = 54 N, constant in Era 1, with
+  anything over it clipped. The target check-in interval is a 12 h placeholder.
+- Once full, the colony can replace at most 4 cells per check-in; nutrients hold steady
+  play to about 3.7.
 - The player sees measured values with 5% noise, never the traits. All rules are
   visible on a rules screen.
 
