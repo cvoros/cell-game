@@ -24,6 +24,14 @@ When a decision is reversed, add a new entry rather than editing the old one.
 - **Scaffolded this folder by hand** rather than with the `create-project` skill, which
   is not synced to the CLI.
 
+- **Hosting: public GitHub repo, deployed via GitHub Pages**, matching delayDay and
+  matchup-tracker. No backend: the game is a static site, state lives in `localStorage`,
+  and offline progress is computed from elapsed time on load.
+- **No Firebase/Supabase for now.** A backend is only worth adding for cross-device
+  sync, shared leaderboards, or server-authoritative time. Accepted consequence: since
+  offline progress uses the device clock, a player can cheat by changing it. Acceptable
+  for a game played by the author and a couple of friends.
+
 ### Pending
 
 - Earned vs. progression-tied graphics.
