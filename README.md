@@ -10,5 +10,8 @@ complexity as the organism does.
 - Current state: `docs/state.md`
 - Project instructions for Claude Code: `CLAUDE.md`
 
+Run the tests with `node --test` from the repo root. It needs Node only, with no
+install step (developed on Node 24).
+
 Status: pre-prototype. The Era 1 spec is written (design doc §13); next milestone is a
 playable vertical slice.

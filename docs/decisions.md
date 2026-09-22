@@ -86,6 +86,39 @@ When a decision is reversed, add a new entry rather than editing the old one.
   `storagePerCell`, so the upgrade path is kept. Anything over the cap is clipped,
   including cull refunds.
 
+- **Build session 1 (config + simulation core).** Where §13 was silent, the code does
+  the following. Each item is easy to change if it plays wrong:
+  - **Player actions live in `src/actions.js`** (`divide`, `cull`, `canDivide`,
+    `canCull`). This file wasn't in the planned layout, but the §13.10 replay can't be
+    tested without it. Actions apply at `state.lastUpdateMs`, so callers advance first.
+  - **`package.json` exists only to set `"type": "module"`**, so plain `.js` files load
+    as ES modules under Node. It has no dependencies.
+  - **`msPerHour` is in the config** so no other file has a bare number, even a unit.
+  - **The starting cell also uses slot 5** (`founderSlot`). §13.7 set slot 5 only for
+    the recolonizing founder.
+  - **A division reserves the lowest-numbered free slot.** The first daughter takes the
+    parent's slot and the second takes the reserved one.
+  - **Fixed random-draw order per daughter:** lethal roll; then for each trait in
+    config order (uptake, divisionHours), a mutation roll, then an effect roll, then a
+    magnitude roll if the effect isn't silent. The order is part of what a seed means,
+    so changing it changes every saved game's future.
+  - **Division time is fixed when the division starts**, from the parent's
+    `divisionHours`.
+  - **Dividing cells can starve.** Their reserved slot is released and the division
+    cost is not refunded. Starvation ties go to the lower cell id. As §13.7 says,
+    starvation is checked only when the pool is at 0; a colony with a positive pool and
+    negative net drains the pool first.
+  - **Extinction recolonizes at the instant of the last death** and leaves the pool
+    untouched. Culling the last cell does the same.
+  - **Event log entries are structured data, not text**, so the renderer decides the
+    wording. Silent mutations aren't recorded. A cull's `refund` is the amount that
+    actually reached the pool after clipping.
+  - **A pool above the cap** (unreachable in normal play) is clipped down by the next
+    advance.
+  - **`advance()` and the actions take an optional config** (default `CONFIG`), so
+    tests can turn mutation off to replay the worked table exactly. The game itself
+    always uses the default.
+
 ### Pending
 
 - Earned vs. progression-tied graphics.

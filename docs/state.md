@@ -5,11 +5,22 @@ Updated: 2026-09-22
 ## Where things stand
 
 Design is at v1.0: direction settled, and Era 1 specified with placeholder numbers in
-`docs/design.md` §13. No code exists yet. The repo is on GitHub (`cvoros/cell-game`,
-branch `main`), but GitHub Pages is not set up yet.
+`docs/design.md` §13. The simulation core is built and tested (build session 1). There
+is no rendering, save, or UI yet, so nothing is playable. The repo is on GitHub
+(`cvoros/cell-game`, branch `main`), but GitHub Pages is not set up yet.
 
 ## What exists
 
+- `src/config.js`: every tunable value from §13, one deep-frozen object
+- `src/rng.js`: mulberry32 as a pure step function; the seed lives in state
+- `src/state.js`: state shape (documented at the top), `createInitialState()`, derived
+  quantities (upkeep, net, cap, free slots)
+- `src/advance.js`: pure, event-driven `advance(state, elapsedMs)`, covering accrual,
+  cap, fission and mutation, non-viable daughters, starvation, and recolonization
+- `src/actions.js`: `divide` and `cull`, plus `canDivide`/`canCull` checks
+- `test/`: 31 tests (`node --test`), including an exact replay of the §13.10 table,
+  determinism, purity (deep-frozen inputs), and guards against tunable numbers
+  outside config and DOM references in the core
 - `CLAUDE.md`: project instructions, pillars, architecture rules, scope guard
 - `docs/design.md`: design document v1.0, including the Era 1 spec (§13)
 - `docs/decisions.md`: decision log
@@ -40,10 +51,12 @@ markdown here is the source of truth.
 1. Define success criteria for the vertical slice, e.g. "after three days of check-ins,
    I've made a selection decision I cared about."
 2. Build the slice in small sessions, roughly:
-   a. Config table plus the pure `advance(state, elapsedMs)` with a seeded PRNG, with
-      tests (accrual, cap, division completion, starvation, clock going backwards).
-   b. Division, mutation, and culling rules, with tests.
+   a. ~~Config, seeded PRNG, pure `advance()`, with tests.~~ Done in session 1.
+   b. ~~Division, mutation, and culling rules, with tests.~~ Done in session 1 (the
+      §13.10 replay test needed the actions).
    c. Save and load (`localStorage`, schema v1) and offline catch-up on load.
+      Phenotype display noise (§13.8) also needs a home, probably a pure
+      `observe(state, sessionNumber)` beside the renderer.
    d. ASCII renderer and keyboard controls matching the §13.11 sketch.
    e. Deploy to GitHub Pages.
 3. Play it for a few days and check the balance risks in §13.13.
