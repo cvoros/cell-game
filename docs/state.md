@@ -5,8 +5,9 @@ Updated: 2026-09-22
 ## Where things stand
 
 Design is at v1.0: direction settled, and Era 1 specified with placeholder numbers in
-`docs/design.md` §13. The simulation core is built and tested (build session 1). There
-is no rendering, save, or UI yet, so nothing is playable. The repo is on GitHub
+`docs/design.md` §13. The simulation core (session 1) and save/load with offline
+catch-up (session 2c) are built and tested. There is no rendering or UI yet, so nothing
+is playable. The repo is on GitHub
 (`cvoros/cell-game`, branch `main`), but GitHub Pages is not set up yet.
 
 ## What exists
@@ -18,9 +19,14 @@ is no rendering, save, or UI yet, so nothing is playable. The repo is on GitHub
 - `src/advance.js`: pure, event-driven `advance(state, elapsedMs)`, covering accrual,
   cap, fission and mutation, non-viable daughters, starvation, and recolonization
 - `src/actions.js`: `divide` and `cull`, plus `canDivide`/`canCull` checks
-- `test/`: 31 tests (`node --test`), including an exact replay of the §13.10 table,
-  determinism, purity (deep-frozen inputs), and guards against tunable numbers
-  outside config and DOM references in the core
+- `src/save.js`: the only module that touches storage. `saveGame`/`loadGame` with
+  injected storage, `validate()`, a migration chain (empty at v1), a `.corrupt` backup
+  for bad saves, refusal of saves from newer versions, and catch-up via `advance()` on
+  load. It never throws on storage failures.
+- `test/`: 50 tests (`node --test`), including an exact replay of the §13.10 table,
+  determinism, purity (deep-frozen inputs), save/load failure modes, a 30-day catch-up
+  performance guard, and guards against tunable numbers outside config, DOM references
+  in the core, and storage access outside `save.js`
 - `CLAUDE.md`: project instructions, pillars, architecture rules, scope guard
 - `docs/design.md`: design document v1.0, including the Era 1 spec (§13)
 - `docs/decisions.md`: decision log
@@ -54,10 +60,16 @@ markdown here is the source of truth.
    a. ~~Config, seeded PRNG, pure `advance()`, with tests.~~ Done in session 1.
    b. ~~Division, mutation, and culling rules, with tests.~~ Done in session 1 (the
       §13.10 replay test needed the actions).
-   c. Save and load (`localStorage`, schema v1) and offline catch-up on load.
-      Phenotype display noise (§13.8) also needs a home, probably a pure
-      `observe(state, sessionNumber)` beside the renderer.
-   d. ASCII renderer and keyboard controls matching the §13.11 sketch.
+   c. ~~Save and load (`localStorage`, schema v1) and offline catch-up on load.~~ Done
+      in session 2c.
+   d. **Next:** ASCII renderer and keyboard controls matching the §13.11 sketch, plus
+      the wiring: load on start, a `uiTickMs` tick, autosave every `autosaveMs`, after
+      each action and on `pagehide`. It must also handle `loadGame` statuses
+      (`futureVersion` means don't start a game; `corrupt` and `storageUnavailable`
+      should tell the player) and a failed `saveGame`. Phenotype display noise (§13.8)
+      also needs a home, probably a pure `observe(state, sessionNumber)` beside the
+      renderer. The session number isn't in the state yet, so adding it means a schema
+      change (v2 plus the first migration).
    e. Deploy to GitHub Pages.
 3. Play it for a few days and check the balance risks in §13.13.
 

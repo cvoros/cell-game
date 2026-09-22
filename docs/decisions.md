@@ -119,6 +119,30 @@ When a decision is reversed, add a new entry rather than editing the old one.
     tests can turn mutation off to replay the worked table exactly. The game itself
     always uses the default.
 
+- **Build session 2c (save/load and offline catch-up).** Where §13.9 was silent:
+  - **A save from a newer schema is refused on both paths.** `loadGame` returns
+    `state: null` with status `futureVersion` and leaves storage untouched, and
+    `saveGame` won't overwrite a newer save (`newerSaveExists`). Without the second
+    guard, an older build (for example a cached copy of the page after a deploy) would
+    start a fresh game and autosave over the player's real one. The 2d UI must show a
+    "reload for the latest version" message instead of starting a game.
+  - **A clock moved backwards freezes the simulation** until the wall clock passes
+    `lastUpdateMs` again. The saved `lastUpdateMs` and division completion times are
+    left alone, so no progress is lost or counted twice. The cost is that a player whose
+    clock jumped back sees nothing happen for that long.
+  - **A fresh game's seed defaults to `nowMs`.** The core bans `Math.random`, and a
+    time-derived seed is different for every new game. It can be overridden for tests.
+  - **Only the most recent corrupt save is kept** (`cell-game.save.corrupt`). The
+    corrupt blob stays under the main key until the next successful save replaces it.
+  - **An older save with no migration step is corrupt**, not guessed at.
+  - **`validate()` checks structure, not balance.** Trait values must be finite and
+    positive but are not checked against the config ranges, so retuning a range can't
+    make existing saves "corrupt". A pool above the cap is accepted (the next advance
+    clips it). Event entries aren't checked beyond `events` being an array, because
+    they are display-only.
+  - **`saveGame` validates before writing**, so a bug upstream can't persist a state
+    that the next load would reject.
+
 ### Pending
 
 - Earned vs. progression-tied graphics.

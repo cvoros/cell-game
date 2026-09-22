@@ -32,13 +32,24 @@ test('no tunable numbers outside config.js', () => {
 
 test('the simulation core references no DOM and imports no renderer', () => {
   for (const { file, code } of sources) {
-    assert.doesNotMatch(code, /\b(document|window|HTMLElement|requestAnimationFrame|localStorage)\b/, file);
+    assert.doesNotMatch(code, /\b(document|window|HTMLElement|requestAnimationFrame)\b/, file);
   }
   // Import paths are strings, which the stripped copy has lost, so read the raw source.
   for (const f of readdirSync(SRC).filter((f) => f.endsWith('.js'))) {
     const imports = [...readFileSync(SRC + f, 'utf8').matchAll(/from\s+['"]([^'"]+)['"]/g)].map((m) => m[1]);
     for (const path of imports) assert.doesNotMatch(path, /render/i, `${f} imports ${path}`);
   }
+});
+
+test('only save.js touches storage', () => {
+  for (const { file, code } of sources) {
+    if (file === 'save.js') continue;
+    assert.doesNotMatch(code, /\b(localStorage|sessionStorage|indexedDB|getItem|setItem)\b/, file);
+  }
+  const imported = sources.filter(({ file }) =>
+    /from\s+['"]\.\/save\.js['"]/.test(readFileSync(SRC + file, 'utf8')),
+  );
+  assert.deepEqual(imported.map((s) => s.file), [], 'the core must not depend on save.js');
 });
 
 test('the core reads no clock and uses no ambient randomness', () => {
