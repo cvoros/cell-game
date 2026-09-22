@@ -55,7 +55,7 @@ export const CONFIG = deepFreeze({
   uiTickMs: 1000,
   autosaveMs: 15000,
   saveKey: 'cell-game.save',
-  schemaVersion: 1,
+  schemaVersion: 2, // v2 added sessionNumber (see MIGRATIONS in save.js)
 
   // §13.11 Event log retention.
   eventLogMax: 50,

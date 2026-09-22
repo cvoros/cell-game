@@ -19,6 +19,7 @@
 //   ],
 //   nextCellId:    number,        next id to hand out
 //   rngSeed:       number,        mulberry32 seed; advanced by every roll
+//   sessionNumber: number,        page loads so far (v2); seeds the §13.8 display noise
 //   events: [                     newest last, at most CONFIG.eventLogMax
 //     { atMs, type: 'divisionStarted', cellId, slot, reservedSlot, cost }
 //     { atMs, type: 'split', parentId, daughters: [
@@ -27,6 +28,7 @@
 //     { atMs, type: 'culled', cellId, slot, refund }
 //     { atMs, type: 'starved', cellId, slot }
 //     { atMs, type: 'recolonized', cellId, slot }
+//     { atMs, type: 'session', sessionNumber, status, elapsedMs }   status from loadGame
 //   ]
 // }
 //
@@ -49,6 +51,7 @@ export function createInitialState({ nowMs, seed }, config = CONFIG) {
     cells: [],
     nextCellId: 1,
     rngSeed: toSeed(seed),
+    sessionNumber: 0,
     events: [],
   };
   for (let i = 0; i < config.startingCells; i++) {
@@ -124,6 +127,19 @@ export function logEvent(draft, event, config = CONFIG) {
   draft.events.push(event);
   const excess = draft.events.length - config.eventLogMax;
   if (excess > 0) draft.events.splice(0, excess);
+}
+
+// Called once per page load, after loadGame: counts the session (which reseeds the
+// §13.8 display noise) and records how the load went in the event log.
+export function beginSession(state, { status, elapsedMs = 0 }, config = CONFIG) {
+  const draft = cloneState(state);
+  draft.sessionNumber += 1;
+  logEvent(
+    draft,
+    { atMs: draft.lastUpdateMs, type: 'session', sessionNumber: draft.sessionNumber, status, elapsedMs },
+    config,
+  );
+  return draft;
 }
 
 // §13.7: if every cell is gone, a base founder drifts into the founder slot.

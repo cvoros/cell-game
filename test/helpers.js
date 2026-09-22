@@ -39,6 +39,7 @@ export function makeState({ pool, cells, nowMs = 0, seed = 1 }) {
     cells,
     nextCellId: Math.max(0, ...cells.map((c) => c.id)) + 1,
     rngSeed: seed,
+    sessionNumber: 0,
     events: [],
   };
 }

@@ -13,15 +13,21 @@ import { toSeed } from './rng.js';
 // ---- Migrations ---------------------------------------------------------------------
 //
 // MIGRATIONS[n] upgrades a save from schema version n to n + 1 and returns a new object
-// (don't mutate the argument). There are none yet: v1 is the first schema.
+// (don't mutate the argument).
 //
 // To change the save shape:
-//   1. Bump CONFIG.schemaVersion (say to 2) and update the state shape in state.js.
-//   2. Add MIGRATIONS[1] = (save) => ({ ...save, schemaVersion: 2, newField: default })
-//      that turns any valid v1 save into a valid v2 save.
-//   3. Update validate() for the new shape, and add a test that loads a real v1 save.
+//   1. Bump CONFIG.schemaVersion (say to 3) and update the state shape in state.js.
+//   2. Add MIGRATIONS[2] = (save) => ({ ...save, schemaVersion: save.schemaVersion + 1,
+//      newField: default }) that turns any valid v2 save into a valid v3 save.
+//   3. Update validate() for the new shape, and add a test that loads a real v2 save
+//      (keep a frozen fixture of one; don't build it with today's createInitialState).
 // Never edit or remove an existing step: old saves in the wild still pass through it.
-export const MIGRATIONS = Object.freeze({});
+export const MIGRATIONS = Object.freeze({
+  // v1 → v2: add the session counter that seeds the §13.8 display noise. A v1 save has
+  // never been through a counted session, so it starts at 0; the load that follows
+  // makes it session 1, exactly like a new game.
+  1: (save) => ({ ...save, schemaVersion: save.schemaVersion + 1, sessionNumber: 0 }),
+});
 
 // Runs a save through the chain up to targetVersion. Throws if a step is missing, and
 // refuses saves from a newer version rather than guessing at them.
@@ -70,6 +76,9 @@ export function validate(state) {
   if (!isInt(state.nextCellId)) problems.push('nextCellId is not an integer');
   if (!isInt(state.rngSeed) || state.rngSeed < 0 || state.rngSeed !== toSeed(state.rngSeed)) {
     problems.push('rngSeed is not an unsigned 32-bit integer');
+  }
+  if (!isInt(state.sessionNumber) || state.sessionNumber < 0) {
+    problems.push('sessionNumber is not an integer >= 0');
   }
   if (!Array.isArray(state.events)) problems.push('events is not an array');
   if (!Array.isArray(state.cells)) {

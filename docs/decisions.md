@@ -143,6 +143,37 @@ When a decision is reversed, add a new entry rather than editing the old one.
   - **`saveGame` validates before writing**, so a bug upstream can't persist a state
     that the next load would reject.
 
+- **Build session 2d (renderer, view, input; save schema v2).**
+  - **Schema v2 adds `sessionNumber`**, which seeds the §13.8 display noise. The v1 → v2
+    migration sets it to 0, so the next load makes it session 1, exactly as for a new
+    game. A frozen v1 save is kept as a test fixture so old saves stay provably
+    loadable.
+  - **`main.js` increments the session, not `loadGame`** (via `beginSession`). This
+    keeps `loadGame` a plain load, so "save then load is identical" and "catch-up
+    equals `advance()`" stay exact. `beginSession` also logs how the load went.
+  - **What counts as visible phenotype.** Per-cell intake, upkeep, net and division time
+    are noisy measurements (SD 5%, drawn per cell per session in a fixed order). The
+    colony's total income and the pool are exact, since the player can watch the pool
+    move. The time left on a division is exact, since a player can watch a division
+    finish. That reveals the parent's true division time only once it's gone. The log
+    reports which daughters were viable, but never which traits mutated.
+  - **Departures from the §13.11 sketch:**
+    - The cell list always shows all 9 slots, empty and reserved ones included, so the
+      layout never jumps and a row can be tapped.
+    - The header shows the local date and time instead of "day 3", because the state
+      has no game start time. Adding one would be a v3 field.
+    - The slot marker sits right beside its number (`> 1`).
+  - **Presentation numbers stay out of the config.** `render.js` keeps its numbers in one
+    `LAYOUT` block and `view.js` keeps its in one `FORMAT` block. The architecture test
+    checks that no other numbers appear in those files, and that `render.js` imports
+    nothing at all.
+  - **Touch input:** the bottom hint line is tappable (`[d]`, `[c]`, `[i]`, `[?]`) and
+    so are grid slots and list rows. Without that, a phone couldn't play at all. It
+    works through a pure `hitTest(viewModel, row, col)`, so the renderer still knows
+    nothing about the DOM.
+  - **Monochrome in both color schemes:** Era 1 has no color, but the page follows the
+    system light or dark setting (one foreground, one background).
+
 ### Pending
 
 - Earned vs. progression-tied graphics.

@@ -143,6 +143,69 @@ test('the migration chain runs each step in order and refuses gaps', () => {
   assert.throws(() => migrate({ schemaVersion: 4 }, { migrations: chain, targetVersion: 3 }), /newer than this build/);
 });
 
+// A real v1 save, frozen as written by the session-2c build. Don't regenerate it from
+// today's code: the point is to prove that yesterday's saves still load.
+const V1_SAVE = Object.freeze({
+  schemaVersion: 1,
+  lastUpdateMs: 1789891200000,
+  pool: 14.4,
+  slots: 9,
+  cells: [
+    { id: 3, slot: 1, genotype: { uptake: 1.043, divisionHours: 5.71 }, generation: 1, parentId: 1, division: null },
+    {
+      id: 2,
+      slot: 5,
+      genotype: { uptake: 1, divisionHours: 6 },
+      generation: 1,
+      parentId: 1,
+      division: { completesAtMs: 1789902000000, reservedSlot: 2 },
+    },
+  ],
+  nextCellId: 4,
+  rngSeed: 3056214129,
+  events: [
+    { atMs: 1789869600000, type: 'divisionStarted', cellId: 1, slot: 5, reservedSlot: 1, cost: 12 },
+    {
+      atMs: 1789891200000,
+      type: 'split',
+      parentId: 1,
+      daughters: [
+        { slot: 5, viable: true, id: 2, mutations: [] },
+        { slot: 1, viable: true, id: 3, mutations: [{ trait: 'uptake', delta: 0.043 }] },
+      ],
+    },
+  ],
+});
+
+test('v1 -> v2 migration adds sessionNumber 0 and preserves everything else', () => {
+  const migrated = migrate(structuredClone(V1_SAVE));
+  assert.equal(migrated.schemaVersion, 2);
+  assert.equal(migrated.sessionNumber, 0);
+  const { schemaVersion: _a, sessionNumber: _b, ...rest } = migrated;
+  const { schemaVersion: _c, ...original } = V1_SAVE;
+  assert.deepEqual(rest, original);
+  assert.deepEqual(validate(migrated), []);
+});
+
+test('a v1 save loads through the migration and is caught up', () => {
+  const storage = fakeStorage({ [KEY]: JSON.stringify(V1_SAVE) });
+  const loaded = loadGame({ storage, nowMs: V1_SAVE.lastUpdateMs + 12 * HOUR });
+  assert.equal(loaded.status, 'migrated');
+  assert.equal(loaded.state.schemaVersion, CONFIG.schemaVersion);
+  assert.equal(loaded.state.sessionNumber, 0);
+  const expected = advance(migrate(structuredClone(V1_SAVE)), 12 * HOUR);
+  assert.deepEqual(loaded.state, expected);
+  // Saving it writes a v2 save; loading that is a plain load.
+  saveGame(loaded.state, { storage });
+  assert.equal(loadGame({ storage, nowMs: loaded.state.lastUpdateMs }).status, 'loaded');
+});
+
+test('validate() requires sessionNumber in v2 saves', () => {
+  const s = createInitialState({ nowMs: T0, seed: 1 });
+  delete s.sessionNumber;
+  assert.match(validate(s).join(), /sessionNumber/);
+});
+
 test('an older save with no migration path is corrupt, not guessed at', () => {
   const old = { ...midGame(), schemaVersion: 0 };
   const loaded = loadGame({ storage: fakeStorage({ [KEY]: JSON.stringify(old) }), nowMs: T0 });

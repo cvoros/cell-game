@@ -5,10 +5,10 @@ Updated: 2026-09-22
 ## Where things stand
 
 Design is at v1.0: direction settled, and Era 1 specified with placeholder numbers in
-`docs/design.md` §13. The simulation core (session 1) and save/load with offline
-catch-up (session 2c) are built and tested. There is no rendering or UI yet, so nothing
-is playable. The repo is on GitHub
-(`cvoros/cell-game`, branch `main`), but GitHub Pages is not set up yet.
+`docs/design.md` §13. The Era 1 vertical slice is playable locally: simulation core
+(session 1), save/load with offline catch-up (2c), and the ASCII renderer, view and
+input (2d). The repo is on GitHub (`cvoros/cell-game`, branch `main`), but GitHub Pages
+is not enabled yet, so it can't be played from a phone.
 
 ## What exists
 
@@ -20,13 +20,23 @@ is playable. The repo is on GitHub
   cap, fission and mutation, non-viable daughters, starvation, and recolonization
 - `src/actions.js`: `divide` and `cull`, plus `canDivide`/`canCull` checks
 - `src/save.js`: the only module that touches storage. `saveGame`/`loadGame` with
-  injected storage, `validate()`, a migration chain (empty at v1), a `.corrupt` backup
-  for bad saves, refusal of saves from newer versions, and catch-up via `advance()` on
-  load. It never throws on storage failures.
-- `test/`: 50 tests (`node --test`), including an exact replay of the §13.10 table,
-  determinism, purity (deep-frozen inputs), save/load failure modes, a 30-day catch-up
-  performance guard, and guards against tunable numbers outside config, DOM references
-  in the core, and storage access outside `save.js`
+  injected storage, `validate()`, a migration chain (v1 → v2), a `.corrupt` backup for
+  bad saves, refusal of saves from newer versions, and catch-up via `advance()` on load.
+  It never throws on storage failures. The save format is at schema v2 (adds
+  `sessionNumber`).
+- `src/view.js`: pure view model. It applies the §13.8 noise (seeded by cell id and
+  session) and holds all wording: event log, messages, banners, and the rules and help
+  screens.
+- `src/render.js`: pure `render(viewModel) -> string` plus `hitTest` for clicks and
+  taps. It imports nothing.
+- `src/main.js`: the only file touching the DOM and the clock. It wires load → 1 s tick
+  (the same `advance()`) → input → autosave (15 s, after actions, on `pagehide`), and
+  handles every load status, including the out-of-date screen.
+- `index.html`: one `<pre>`, monochrome, 72 columns scaled to the viewport.
+- `test/`: 79 tests (`node --test`) covering the simulation, the §13.10 replay,
+  determinism, purity, save/load failure modes and the v1 → v2 migration, the view and
+  its noise, the renderer and hit testing, and architecture guards (tunable numbers,
+  DOM, clock, storage, and renderer isolation)
 - `CLAUDE.md`: project instructions, pillars, architecture rules, scope guard
 - `docs/design.md`: design document v1.0, including the Era 1 spec (§13)
 - `docs/decisions.md`: decision log
@@ -62,15 +72,13 @@ markdown here is the source of truth.
       §13.10 replay test needed the actions).
    c. ~~Save and load (`localStorage`, schema v1) and offline catch-up on load.~~ Done
       in session 2c.
-   d. **Next:** ASCII renderer and keyboard controls matching the §13.11 sketch, plus
-      the wiring: load on start, a `uiTickMs` tick, autosave every `autosaveMs`, after
-      each action and on `pagehide`. It must also handle `loadGame` statuses
-      (`futureVersion` means don't start a game; `corrupt` and `storageUnavailable`
-      should tell the player) and a failed `saveGame`. Phenotype display noise (§13.8)
-      also needs a home, probably a pure `observe(state, sessionNumber)` beside the
-      renderer. The session number isn't in the state yet, so adding it means a schema
-      change (v2 plus the first migration).
-   e. Deploy to GitHub Pages.
+   d. ~~ASCII renderer, view model with display noise, input, wiring; schema v2.~~
+      Done in session 2d. It was driven end to end under Node with stand-in DOM,
+      storage and clock, but hasn't yet been checked by hand in a real browser.
+   e. **Next:** enable GitHub Pages and verify on a phone. Things to check: text size
+      at 72 columns on a narrow screen (the font scales to fit, so it may be tiny), that
+      tap targets land (slots, list rows, the bottom command line), saving across a
+      closed tab, and catch-up after hours away.
 3. Play it for a few days and check the balance risks in §13.13.
 
 ## Open questions
